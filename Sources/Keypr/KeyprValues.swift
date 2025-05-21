@@ -24,51 +24,61 @@ public final class KeyprValues: Codable, @unchecked Sendable {
     
     public init() {}
     
-    public subscript<K: KeyprKey>(key: K.Type) -> K.Value {
+    public subscript<V: Codable & Sendable>(name: String, default defaultValue: V) -> V {
         get {
             queue.sync {
-                if let cached = cache[K.name],
-                   let casted = cached as? K.Value {
+                if let cached = cache[name],
+                   let casted = cached as? V {
                     return casted
                 }
-                guard let data = encodedStorage[K.name],
-                      let decoded = try? JSONDecoder().decode(K.Value.self, from: data)
+                guard let data = encodedStorage[name],
+                      let decoded = try? JSONDecoder().decode(V.self, from: data)
                 else {
-                    let value = K.defaultValue
-                    cache[K.name] = value
+                    let value = defaultValue
+                    cache[name] = value
                     return value
                 }
-                cache[K.name] = decoded
+                cache[name] = decoded
                 return decoded
             }
         }
         set {
             queue.sync {
-                self.cache[K.name] = newValue
-                self.encodedStorage[K.name] = try! JSONEncoder().encode(newValue)
+                self.cache[name] = newValue
+                self.encodedStorage[name] = try! JSONEncoder().encode(newValue)
                 self.queue.async {
                     self.updater.send(Void())
-                    self.subject(for: K.self).send(newValue)
+                    self.subject(for: name).send(newValue)
                 }
             }
         }
     }
     
+    public subscript<K: KeyprKey>(key: K.Type) -> K.Value {
+        get { self[K.name, default: K.defaultValue] }
+        set { self[K.name, default: K.defaultValue] = newValue }
+    }
+    
     public func publisher<K: KeyprKey>(for key: K.Type) -> AnyPublisher<K.Value, Never> {
-        let initialValue = self[key]
-        return subject(for: K.self)
-            .map { $0 as! K.Value }
+        return publisher(for: K.name, default: K.defaultValue)
+    }
+    
+    public func publisher<V: Codable & Sendable>(for name: String, default defaultValue: V) -> AnyPublisher<V, Never> {
+        let initialValue = self[name, default: defaultValue]
+        return subject(for: name)
+            .map { $0 as! V }
             .prepend(initialValue)
             .eraseToAnyPublisher()
     }
     
-    private func subject<K: KeyprKey>(for key: K.Type) -> PassthroughSubject<Any, Never> {
+    private func subject(for name: String) -> PassthroughSubject<Any, Never> {
         queue.sync {
-            if let subject = subjects[K.name] as? PassthroughSubject<Any, Never> {
+            if let subject = subjects[name] as? PassthroughSubject<Any, Never> {
                 return subject
             }
+            
             let subject = PassthroughSubject<Any, Never>()
-            subjects[K.name] = subject
+            subjects[name] = subject
             return subject
         }
     }

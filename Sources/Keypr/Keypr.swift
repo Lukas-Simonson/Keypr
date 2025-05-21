@@ -52,6 +52,11 @@ public final class Keypr: @unchecked Sendable {
     public subscript<T>(dynamicMember keyPath: KeyPath<KeyprValues, T>) -> T {
         get { values[keyPath: keyPath] }
     }
+    
+    public subscript<T: Codable & Sendable>(name: String, default defaultValue: T) -> T {
+        get { values[name, default: defaultValue] }
+        set { values[name, default: defaultValue] = newValue }
+    }
 }
 
 public extension Keypr {
