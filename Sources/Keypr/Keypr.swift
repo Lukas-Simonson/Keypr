@@ -5,9 +5,11 @@ import Foundation
 @_exported import Combine
 
 @dynamicMemberLookup
-public final class Keypr: Sendable {
+public final class Keypr: @unchecked Sendable {
     public let pathURL: URL
     public let values: KeyprValues
+    
+    private(set) var cancellable: AnyCancellable?
     
     public init(path: URL) throws {
         self.pathURL = path
@@ -18,6 +20,10 @@ public final class Keypr: Sendable {
         } else {
             KeyprValues()
         }
+        
+        self.cancellable = self.values.updater
+            .debounce(for: .milliseconds(500), scheduler: DispatchQueue.global())
+            .sink { _ in try? self.save() }
     }
     
     public func save() throws {
