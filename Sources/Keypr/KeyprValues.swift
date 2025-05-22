@@ -18,7 +18,7 @@ public final class KeyprValues: Codable, @unchecked Sendable {
     private var encodedStorage: [String: Data] = [:]
     private var cache: [String: Any] = [:]
     private var subjects: [String: Any] = [:]
-    private let queue = DispatchQueue(label: "com.keypr.values", attributes: .concurrent)
+    private let queue = DispatchQueue(label: "com.keypr.values")
     
     internal let updater = PassthroughSubject<Void, Never>()
     
@@ -46,11 +46,10 @@ public final class KeyprValues: Codable, @unchecked Sendable {
             queue.sync {
                 self.cache[name] = newValue
                 self.encodedStorage[name] = try! JSONEncoder().encode(newValue)
-                self.queue.async {
-                    self.updater.send(Void())
-                    self.subject(for: name).send(newValue)
-                }
             }
+            
+            self.updater.send(Void())
+            self.subject(for: name).send(newValue)
         }
     }
     
