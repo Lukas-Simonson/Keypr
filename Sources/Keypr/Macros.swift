@@ -6,5 +6,5 @@
 //
 
 @attached(accessor)
-@attached(peer, names: prefixed(__Key_), prefixed(`$`))
+@attached(peer, names: prefixed(__Key_), prefixed(`$`), prefixed(_))
 public macro Keyed() = #externalMacro(module: "Keyed", type: "KeyedMacro")
