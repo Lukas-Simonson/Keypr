@@ -16,6 +16,10 @@ fileprivate extension Keypr {
     @Keyed var stringKey: String = "default"
     @Keyed var complexKey: ComplexData? = nil
     @Keyed var concurrent: Double = 0
+    
+    @Keyed var exampleBoolean: Bool = false
+    @Keyed var exampleInt: Int = 42
+    @Keyed var emptyValue: Double? = nil
 }
 
 fileprivate struct ComplexData: Codable, Sendable, Equatable {
@@ -56,6 +60,17 @@ struct KeyprValuesTests {
     func testDefaultReturned() async {
         let values = Keypr(encodedStorage: [:])
         #expect(await values.stringKey == "default")
+    }
+    
+    @Test("Test value gets deleted")
+    func testValueGetsDeleted() async {
+        let values = Keypr(encodedStorage: [:])
+        await values.mutate { k in
+            k.testKey = 100
+        }
+        #expect(await values.testKey == 100)
+        await values._testKey.delete() // Values should be empty
+        #expect(await values.testKey == 42) // Reset to Default
     }
     
     @Test("Test Thread Safety of values")
@@ -130,3 +145,5 @@ struct KeyprValuesTests {
         #expect(await decoded.complexKey == original.complexKey)
     }
 }
+
+

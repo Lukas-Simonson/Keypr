@@ -71,6 +71,7 @@ extension KeyedMacro: PeerMacro {
                     isolatedTo: self,
                     getter: { $0[\(raw: keyName).self] },
                     setter: { $0[\(raw: keyName).self] = $1 },
+                    deleter: { $0.delete(\(raw: keyName).name) },
                     stream: { $0.stream(for: \(raw: keyName).self) }
                 )
             }

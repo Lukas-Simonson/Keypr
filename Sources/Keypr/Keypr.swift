@@ -88,6 +88,16 @@ extension Keypr {
     nonisolated public func mutate(_ modifying: @escaping @Sendable (isolated Keypr) async -> Void) {
         Task { await modifying(self) }
     }
+    
+    public func delete<K: KeyprKey>(_ key: K.Type) {
+        self.delete(key.name)
+    }
+    
+    public func delete(_ name: String) {
+        self.cache.removeValue(forKey: name)
+        self.encodedStorage.removeValue(forKey: name)
+        self.save()
+    }
 }
 
 // MARK: Observation
@@ -106,7 +116,11 @@ extension Keypr {
 
 // MARK: Persistence
 extension Keypr {
-    public func save() {
+    public nonisolated func save() {
+        Task { try? await save() }
+    }
+    
+    private func autosave() {
         saveTask?.cancel()
         saveTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(1))
