@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-@preconcurrency import Combine
 
 @MainActor @propertyWrapper
 public struct Keyp<V: Codable & Sendable>: DynamicProperty {
@@ -51,8 +50,6 @@ private class AccessorKeypUpdater<V: Codable & Sendable>: KeypUpdater<V> {
     
     private let accessor: KeyprIsolatedAccessor<V>
     
-    private var cancellable: AnyCancellable?
-    
     init(accessor: KeyprIsolatedAccessor<V>) {
         self.accessor = accessor
         super.init(storedValue: accessor.defaultValue)
@@ -79,8 +76,6 @@ private class NamedKeypUpdater<V: Codable & Sendable>: KeypUpdater<V> {
     private let store: Keypr
     private let name: String
     private let defaultValue: V
-    
-    private var cancellable: AnyCancellable?
     
     init(store: Keypr, name: String, defaultValue: V) {
         self.store = store

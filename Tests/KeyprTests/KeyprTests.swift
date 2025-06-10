@@ -1,6 +1,6 @@
 import Testing
 import Foundation
-@testable @preconcurrency import Keypr
+@testable import Keypr
 
 struct ComplexType: Codable, Equatable {
     var name = UUID().uuidString
@@ -87,13 +87,13 @@ struct KeyprValuesTests {
         
         Task {
             // Delay to allow subscriber to setup
-            try? await Task.sleep(for: .milliseconds(500))
+            try? await Task.sleep(for: .seconds(1))
             await values.mutate { k in
                 k.testKey = 99
             }
             
             
-            try? await Task.sleep(for: .milliseconds(500))
+            try? await Task.sleep(for: .seconds(1))
             await values.mutate { k in
                 k.testKey = 404
             }

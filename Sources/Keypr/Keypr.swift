@@ -13,8 +13,8 @@ public actor Keypr {
     public let pathURL: URL?
     
     private var encodedStorage: [String: Data]
-    private var cache: [String: any Sendable] = [:]
-    private let sequence = AsyncStateSequence<[String: any Sendable]>(initial: [:])
+    private var cache: [String: AnyKeyable] = [:]
+    private let sequence = AsyncStateSequence<[String: AnyKeyable]>(initial: [:])
     
     private var saveTask: Task<Void, Error>? = nil
     
@@ -57,23 +57,22 @@ extension Keypr {
     
     public func getValue<V: Codable & Sendable>(for name: String, default dv: V) -> V {
         if let cached = cache[name],
-           let casted = cached as? V
+           let casted = cached.value(as: V.self)
         { return casted }
         
         guard let data = encodedStorage[name],
               let decoded = try? JSONDecoder().decode(V.self, from: data)
         else {
-            cache[name] = dv
+            cache[name] = AnyKeyable(dv)
             return dv
         }
         
-        cache[name] = decoded
+        cache[name] = AnyKeyable(decoded)
         return decoded
     }
     
     public func setValue<V: Codable & Sendable>(_ value: V, for name: String) throws {
-        self.cache[name] = value
-        self.encodedStorage[name] = try JSONEncoder().encode(value)
+        self.cache[name] = AnyKeyable(value)
         self.sequence.emit(cache)
         self.save()
     }
@@ -93,14 +92,15 @@ extension Keypr {
 
 // MARK: Observation
 extension Keypr {
-    public typealias Stream<V: Codable & Sendable> = AsyncCompactMapSequence<AsyncStateSequence<[String: any Sendable]>, V>
+    public typealias Stream<V: Codable & Sendable> = AsyncCompactMapSequence<AsyncStateSequence<[String: AnyKeyable]>, V>
     
     public func stream<K: KeyprKey>(for key: K.Type) -> Stream<K.Value> {
         stream(for: key.name, default: key.defaultValue)
     }
     
     public func stream<V: Codable & Sendable>(for name: String, default dv: V) -> Stream<V> {
-        sequence.compactMap { $0[name, default: dv] as? V }
+        let initial = getValue(for: name, default: dv)
+        return sequence.compactMap { $0[name]?.value(as: V.self) ?? initial }
     }
 }
 
@@ -157,7 +157,14 @@ extension Keypr {
     }
     
     internal var encoded: Data {
-        get throws { try JSONEncoder().encode(encodedStorage) }
+        get throws {
+            // Update encoded storage with cached values
+            for (key, value) in cache {
+                encodedStorage[key] = try JSONEncoder().encode(value)
+            }
+            
+            return try JSONEncoder().encode(encodedStorage)
+        }
     }
     
     internal static func decoded(_ data: Data) throws -> Keypr {
