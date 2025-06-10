@@ -40,7 +40,7 @@ struct KeyprValuesTests {
     func testGetSetValueByName() async throws {
         let values = Keypr(encodedStorage: [:])
         #expect(await values["foo", default: 123] == 123)
-        try await values.setValue(456, for: "foo")
+        await values.setValue(456, for: "foo")
         #expect(await values["foo", default: 123] == 456)
     }
     
@@ -133,7 +133,7 @@ struct KeyprValuesTests {
         }
         
         // Encode Keypr's Storage
-        let encoded = try await original.encoded
+        let encoded = try await original.encode()
         
         // Decode into a new Keypr
         let decodedStorage = try JSONDecoder().decode([String: Data].self, from: encoded)
