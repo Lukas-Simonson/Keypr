@@ -155,7 +155,7 @@ extension Keypr {
         }
     }
     
-    static func removeKeypr(named name: String) throws {
+    public static func removeKeypr(named name: String) throws {
         guard let directory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first,
               let regexPattern = try? Regex("[<>:\"/\\\\|?*\\s\u{0000}-\u{001F}]")
         else { return }
@@ -164,7 +164,7 @@ extension Keypr {
         try removeKeypr(atPath: directory.appending(path: ".\(fileName).keyp"))
     }
     
-    static func removeKeypr(atPath path: URL) throws {
+    public static func removeKeypr(atPath path: URL) throws {
         if FileManager.default.isDeletableFile(atPath: path.absoluteString) {
             try FileManager.default.removeItem(at: path)
         }
