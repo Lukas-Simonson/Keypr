@@ -6,7 +6,7 @@
 <p align="center">Compile-Time Safe Key Value Storage</p>
 
 <p align="center">
-    <a href="https://developer.apple.com/swift/"><img alt="Swift 5.10" src="https://img.shields.io/badge/swift-5.10-orange.svg?style=flat"></a>
+    <a href="https://developer.apple.com/swift/"><img alt="Swift 6.0" src="https://img.shields.io/badge/swift-6.0-orange.svg?style=flat"></a>
     <a href="LICENSE"><img alt="license" src="https://img.shields.io/badge/license-MIT-black.svg"></a>
 </p>
 
