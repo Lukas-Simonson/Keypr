@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import Combine
 
 @MainActor @propertyWrapper
 public struct Keyp<V: Codable & Sendable>: DynamicProperty {
@@ -24,24 +23,16 @@ public struct Keyp<V: Codable & Sendable>: DynamicProperty {
         )
     }
     
-    init(
-        _ store: Keypr,
-        value: ReferenceWritableKeyPath<KeyprValues, V>,
-        publisher: KeyPath<KeyprValues, AnyPublisher<V, Never>>
-    ) {
-        keypUpdater = PathKeypUpdater(store: store, valuePath: value, publisherPath: publisher)
+    init(_ accessor: KeyprIsolatedAccessor<V>) {
+        keypUpdater = AccessorKeypUpdater(accessor: accessor)
     }
     
-    init(
-        wrappedValue: V,
-        _ store: Keypr,
-        _ name: String,
-    ) {
-        keypUpdater = NameKeypUpdater(store: store, name: name, default: wrappedValue)
+    init(wrappedValue: V, _ store: Keypr, _ name: String) {
+        keypUpdater = NamedKeypUpdater(store: store, name: name, defaultValue: wrappedValue)
     }
 }
 
-@Observable
+@Observable @MainActor
 private class KeypUpdater<V: Codable & Sendable> {
     var storedValue: V
     
@@ -54,59 +45,56 @@ private class KeypUpdater<V: Codable & Sendable> {
     }
 }
 
-@Observable
-private class PathKeypUpdater<V: Codable & Sendable>: KeypUpdater<V> {
-    private let store: Keypr
-    private let valuePath: ReferenceWritableKeyPath<KeyprValues, V>
-    private var cancellable: AnyCancellable?
+@Observable @MainActor
+private class AccessorKeypUpdater<V: Codable & Sendable>: KeypUpdater<V> {
     
-    init(
-        store: Keypr,
-        valuePath: ReferenceWritableKeyPath<KeyprValues, V>,
-        publisherPath: KeyPath<KeyprValues, AnyPublisher<V, Never>>
-    ) {
-        self.store = store
-        self.valuePath = valuePath
-        super.init(storedValue: store.values[keyPath: valuePath])
+    private let accessor: KeyprIsolatedAccessor<V>
+    
+    init(accessor: KeyprIsolatedAccessor<V>) {
+        self.accessor = accessor
+        super.init(storedValue: accessor.defaultValue)
         
-        self.cancellable = store.values[keyPath: publisherPath]
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] newValue in
-                self?.storedValue = newValue
+        Task { [weak self] in
+            let stream = await accessor.stream()
+            for try await element in stream {
+                guard let self else { break }
+                self.storedValue = element
             }
-    }
-    
-    override func updateValue(_ value: V) { store.values[keyPath: valuePath] = value }
-    
-    deinit { cancellable?.cancel() }
-}
-
-@Observable
-private class NameKeypUpdater<V: Codable & Sendable>: KeypUpdater<V> {
-    private let store: Keypr
-    private let name: String
-    private var cancellable: AnyCancellable?
-    
-    init(
-        store: Keypr,
-        name: String,
-        default defaultValue: V
-    ) {
-        self.store = store
-        self.name = name
-        super.init(storedValue: store.values[name, default: defaultValue])
-        // self.storedValue = store.values[name, default: defaultValue]
-        
-        self.cancellable = store.values.publisher(for: name, default: defaultValue)
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] newValue in
-                self?.storedValue = newValue
-            }
+        }
     }
     
     override func updateValue(_ value: V) {
-        store.values[name, default: storedValue] = value
+        Task {
+            await accessor.setValue(value)
+        }
+    }
+}
+
+@Observable @MainActor
+private class NamedKeypUpdater<V: Codable & Sendable>: KeypUpdater<V> {
+    
+    private let store: Keypr
+    private let name: String
+    private let defaultValue: V
+    
+    init(store: Keypr, name: String, defaultValue: V) {
+        self.store = store
+        self.name = name
+        self.defaultValue = defaultValue
+        super.init(storedValue: defaultValue)
+        
+        Task { [weak self] in
+            let stream = await store.stream(for: name, default: defaultValue)
+            for try await element in stream {
+                guard let self else { break }
+                self.storedValue = element
+            }
+        }
     }
     
-    deinit { cancellable?.cancel() }
+    override func updateValue(_ value: V) {
+        Task {
+            try? await store.setValue(value, for: name)
+        }
+    }
 }

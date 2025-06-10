@@ -24,8 +24,8 @@ extension KeyedMacro: AccessorMacro {
         let extensionType = context.lexicalContext.first?
             .as(ExtensionDeclSyntax.self)?.extendedType
             .as(IdentifierTypeSyntax.self)
-        guard extensionType?.name.text == "KeyprValues" else {
-            throw MacroExpansionErrorMessage("Resolved macro must be applied to KeyprValues")
+        guard extensionType?.name.text == "Keypr" else {
+            throw MacroExpansionErrorMessage("Resolved macro must be applied to Keypr")
         }
         
         guard let identifier = declaration.as(VariableDeclSyntax.self)?.bindings.first?.pattern else {
@@ -63,10 +63,23 @@ extension KeyedMacro: PeerMacro {
         
         return [
             
-            // Publisher Macro
+            // IsolatedAccessor Macro
             """
-            var $\(raw: identifier): AnyPublisher<\(raw: type), Never> {
-                publisher(for: \(raw: keyName).self)
+            nonisolated var _\(raw: identifier): KeyprIsolatedAccessor<\(raw: type)> {
+                KeyprIsolatedAccessor(
+                    defaultValue: \(raw: keyName).defaultValue,
+                    isolatedTo: self,
+                    getter: { $0[\(raw: keyName).self] },
+                    setter: { $0[\(raw: keyName).self] = $1 },
+                    stream: { $0.stream(for: \(raw: keyName).self) }
+                )
+            }
+            """,
+            
+            // Stream Macro
+            """
+            var $\(raw: identifier): Stream<\(raw: type)> {
+                stream(for: \(raw: keyName).self)
             }
             """,
             
