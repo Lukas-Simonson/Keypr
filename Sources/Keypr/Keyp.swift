@@ -58,12 +58,11 @@ private class AccessorKeypUpdater<V: Codable & Sendable>: KeypUpdater<V> {
         super.init(storedValue: accessor.defaultValue)
         
         Task { [weak self] in
-            self?.cancellable = await accessor.publisher()
-                .receive(on: DispatchQueue.main)
-                .sink { [weak self] newValue in
-                    self?.storedValue = newValue
-                    print("Updating Stored Value to \(newValue)")
-                }
+            let stream = await accessor.stream()
+            for try await element in stream {
+                guard let self else { break }
+                self.storedValue = element
+            }
         }
     }
     
@@ -90,12 +89,11 @@ private class NamedKeypUpdater<V: Codable & Sendable>: KeypUpdater<V> {
         super.init(storedValue: defaultValue)
         
         Task { [weak self] in
-            self?.cancellable = await store.publisher(for: name, default: defaultValue)
-                .receive(on: DispatchQueue.main)
-                .sink { [weak self] newValue in
-                    self?.storedValue = newValue
-                    print("Updating Stored Value to \(newValue)")
-                }
+            let stream = await store.stream(for: name, default: defaultValue)
+            for try await element in stream {
+                guard let self else { break }
+                self.storedValue = element
+            }
         }
     }
     

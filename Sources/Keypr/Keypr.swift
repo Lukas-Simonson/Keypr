@@ -1,9 +1,6 @@
 // The Swift Programming Language
 // https://docs.swift.org/swift-book
 
-//import Foundation
-@_exported @preconcurrency import Combine
-
 import Foundation
 
 public protocol KeyprKey {
@@ -16,8 +13,8 @@ public actor Keypr {
     public let pathURL: URL?
     
     private var encodedStorage: [String: Data]
-    private var cache: [String: Any] = [:]
-    private var subjects: [String: Any] = [:]
+    private var cache: [String: any Sendable] = [:]
+    private let sequence = AsyncStateSequence<[String: any Sendable]>(initial: [:])
     
     private var saveTask: Task<Void, Error>? = nil
     
@@ -76,8 +73,8 @@ extension Keypr {
     
     public func setValue<V: Codable & Sendable>(_ value: V, for name: String) throws {
         self.cache[name] = value
-        self.subject(for: name).send(value)
         self.encodedStorage[name] = try JSONEncoder().encode(value)
+        self.sequence.emit(cache)
         self.save()
     }
     
@@ -94,44 +91,38 @@ extension Keypr {
     }
 }
 
-// MARK: Combine
+// MARK: Observation
 extension Keypr {
-    public func publisher<K: KeyprKey>(for key: K.Type) -> AnyPublisher<K.Value, Never> {
-        return publisher(for: K.name, default: K.defaultValue)
+    public typealias Stream<V: Codable & Sendable> = AsyncCompactMapSequence<AsyncStateSequence<[String: any Sendable]>, V>
+    
+    public func stream<K: KeyprKey>(for key: K.Type) -> Stream<K.Value> {
+        stream(for: key.name, default: key.defaultValue)
     }
     
-    public func publisher<V: Codable & Sendable>(for name: String, default defaultValue: V) -> AnyPublisher<V, Never> {
-        let initialValue = self[name, default: defaultValue]
-        return subject(for: name)
-            .map { $0 as! V }
-            .prepend(initialValue)
-            .eraseToAnyPublisher()
-    }
-    
-    private func subject(for name: String) -> PassthroughSubject<Any, Never> {
-        if let subject = subjects[name] as? PassthroughSubject<Any, Never> {
-            return subject
-        }
-        
-        let subject = PassthroughSubject<Any, Never>()
-        subjects[name] = subject
-        return subject
+    public func stream<V: Codable & Sendable>(for name: String, default dv: V) -> Stream<V> {
+        sequence.compactMap { $0[name, default: dv] as? V }
     }
 }
 
 // MARK: Persistence
 extension Keypr {
     public func save() {
-        saveTask = Task { try? await save() }
+        saveTask?.cancel()
+        saveTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(1))
+            if Task.isCancelled { return }
+            
+            try await self?.persist()
+        }
     }
     
     public func save() async throws {
-        guard let pathURL else { return }
-        
         saveTask?.cancel()
-        
-        try await Task.sleep(for: .seconds(1))
-        guard !Task.isCancelled else { return }
+        try await persist()
+    }
+    
+    private func persist() async throws {
+        guard let pathURL else { return }
         
         let pathStr = pathURL.path(percentEncoded: false)
         let encodedData = try encoded

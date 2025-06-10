@@ -71,15 +71,15 @@ extension KeyedMacro: PeerMacro {
                     isolatedTo: self,
                     getter: { $0[\(raw: keyName).self] },
                     setter: { $0[\(raw: keyName).self] = $1 },
-                    publisher: { $0.publisher(for: \(raw: keyName).self) }
+                    stream: { $0.stream(for: \(raw: keyName).self) }
                 )
             }
             """,
             
-            // Publisher Macro
+            // Stream Macro
             """
-            var $\(raw: identifier): AnyPublisher<\(raw: type), Never> {
-                publisher(for: \(raw: keyName).self)
+            var $\(raw: identifier): Stream<\(raw: type)> {
+                stream(for: \(raw: keyName).self)
             }
             """,
             

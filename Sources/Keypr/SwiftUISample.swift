@@ -13,7 +13,7 @@ extension Keypr {
 }
 
 extension Keypr {
-    static let main = Keypr(name: "main")!
+    static let main = Keypr(name: "main2")!
 }
 
 struct SampleView: View {

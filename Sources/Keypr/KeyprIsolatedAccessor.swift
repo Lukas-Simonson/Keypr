@@ -5,40 +5,38 @@
 //  Created by Lukas Simonson on 6/9/25.
 //
 
-@preconcurrency import Combine
-
-public struct KeyprIsolatedAccessor<Value: Sendable>: Sendable {
+public struct KeyprIsolatedAccessor<Value: Codable & Sendable>: Sendable {
     
     let defaultValue: Value
     
-    private let isolatedTo: Keypr
+    private let store: Keypr
     private let getter: @Sendable (isolated Keypr) -> Value
     private let setter: (@Sendable (isolated Keypr, Value) -> Void)?
-    private let publisher: (@Sendable (isolated Keypr) -> AnyPublisher<Value, Never>)
+    private let stream: @Sendable (isolated Keypr) -> Keypr.Stream<Value>
     
     public init(
         defaultValue: Value,
-        isolatedTo: Keypr,
+        isolatedTo store: Keypr,
         getter: @Sendable @escaping (isolated Keypr) -> Value,
         setter: (@Sendable (isolated Keypr, Value) -> Void)?,
-        publisher: @Sendable @escaping (isolated Keypr) -> AnyPublisher<Value, Never>
+        stream: @Sendable @escaping (isolated Keypr) -> Keypr.Stream<Value>
     ) {
         self.defaultValue = defaultValue
-        self.isolatedTo = isolatedTo
+        self.store = store
         self.getter = getter
         self.setter = setter
-        self.publisher = publisher
+        self.stream = stream
     }
     
-    func publisher() async -> AnyPublisher<Value, Never> {
-        await publisher(isolatedTo)
+    func stream() async -> Keypr.Stream<Value> {
+        await stream(store)
     }
     
     func getValue() async -> Value {
-        await getter(isolatedTo)
+        await getter(store)
     }
     
     func setValue(_ value: Value) async {
-        await setter?(isolatedTo, value)
+        await setter?(store, value)
     }
 }

@@ -81,28 +81,30 @@ struct KeyprValuesTests {
         #expect((1...iterations).contains(Int(finalValue)), "Final value out of expected range: \(finalValue)")
     }
     
-    
-    @Test("Test Publisher emits values on change")
-    func testPublisherEmitsValues() async {
+    @Test("Test Sequence Emits values on Change")
+    func testSequenceEmitsValues() async {
         let values = Keypr(encodedStorage: [:])
-        var received: [Int] = []
-        let expectation = AsyncExpectation()
-        let cancellable = await values.$testKey
-            .sink { value in
-                received.append(value)
-                if received.count == 2 {
-                    Task { await expectation.fulfill() }
-                }
+        
+        Task {
+            // Delay to allow subscriber to setup
+            try? await Task.sleep(for: .milliseconds(500))
+            await values.mutate { k in
+                k.testKey = 99
             }
+            
+            
+            try? await Task.sleep(for: .milliseconds(500))
+            await values.mutate { k in
+                k.testKey = 404
+            }
+        }
         
-        try! await values.setValue(99, for: "testKey")
-        
-        await expectation.wait()
-        
-        #expect(received[0] == 42) // initial value
-        #expect(received[1] == 99) // updated value
-        
-        _ = cancellable // keep alive
+        let stream = await values.$testKey
+        var expectedValues = [42, 99, 404]
+        for await value in stream {
+            #expect(value == expectedValues.removeFirst())
+            if expectedValues.isEmpty { break }
+        }
     }
     
     @Test("Test Keypr encoding and decoding preserves values")
@@ -128,42 +130,3 @@ struct KeyprValuesTests {
         #expect(await decoded.complexKey == original.complexKey)
     }
 }
-
-actor AsyncExpectation {
-    private var fulfilled = false
-    private var continuations: [CheckedContinuation<Void, Never>] = []
-    
-    func fulfill() {
-        fulfilled = true
-        continuations.forEach { $0.resume() }
-        continuations.removeAll()
-    }
-    
-    func wait() async {
-        if fulfilled { return }
-        await withCheckedContinuation { cont in
-            continuations.append(cont)
-        }
-    }
-}
-
-//@Test
-//func example() async throws {
-//    
-//    let store = Keypr.main
-//    
-//    store.myFeature = "Hello, World!"
-//    store.myComplexType = ComplexType()
-//    
-//    let c = store.values.publisher(for: "dynamic_key", default: "no_value")
-//        .sink { print($0) }
-//    
-//    store.values["dynamic_key", default: "no_value"] = "cool value"
-//    
-//    let encoded = try JSONEncoder().encode(store.values)
-//    let decoded = try JSONDecoder().decode(KeyprValues.self, from: encoded)
-//
-//    #expect(decoded.myFeature == store.myFeature)
-//    #expect(decoded.myComplexType == store.myComplexType)
-//    #expect(decoded["dynamic_key", default: "some_value"] == store.values["dynamic_key", default: "no_value"])
-//}
