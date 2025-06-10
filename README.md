@@ -18,7 +18,7 @@ Features:
 - ✅ Compile-time safe key-value storage, eliminate stringly-typed keys and catch errors at build time
 - 👀 Property observability, react to changes with minimal effort
 - 🔄 Dynamic (runtime) storage support,  flexibility when static keys aren't feasible
-- 💾 Automatic saving, persist values automatically, including while the app is in the background or tshe device is locked
+- 💾 Automatic saving, persist values automatically, including while the app is in the background or the device is locked
 - 🧶 Thread-Safe, Keypr is thread-safe and Swift 6 ready!
 - 🧩 SwiftUI property wrapper integration, bind stored values directly to your UI
 
