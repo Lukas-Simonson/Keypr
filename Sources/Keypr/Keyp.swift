@@ -76,6 +76,9 @@ private class AccessorKeypUpdater<V: Codable & Sendable>: KeypUpdater<V> {
     /// The accessor for isolated `Keypr` access.
     private let accessor: KeyprIsolatedAccessor<V>
     
+    /// A task in charge of debouncing Keypr value writes.
+    private var updateTask: Task<Void, Never>?
+    
     /// Initializes with an accessor and starts listening for value changes.
     /// - Parameter accessor: The accessor to observe.
     init(accessor: KeyprIsolatedAccessor<V>) {
@@ -94,8 +97,13 @@ private class AccessorKeypUpdater<V: Codable & Sendable>: KeypUpdater<V> {
     /// Updates the value in the underlying accessor asynchronously.
     /// - Parameter value: The new value.
     override func updateValue(_ value: V) {
-        Task {
-            await accessor.setValue(value)
+        updateTask?.cancel()
+        storedValue = value
+        updateTask = Task {
+            try? await Task.sleep(for: .seconds(1))
+            if !Task.isCancelled {
+                await accessor.setValue(value)
+            }
         }
     }
 }
@@ -113,6 +121,9 @@ private class NamedKeypUpdater<V: Codable & Sendable>: KeypUpdater<V> {
     
     /// The default / initial value.
     private let defaultValue: V
+    
+    /// A task in charge of debouncing Keypr value writes.
+    private var updateTask: Task<Void, Never>?
     
     /// Initializes with a store, key name, and default value, and starts listening for value changes.
     /// - Parameters:
@@ -137,8 +148,13 @@ private class NamedKeypUpdater<V: Codable & Sendable>: KeypUpdater<V> {
     /// Updates the value in the underlying store asynchronously.
     /// - Parameter value: The new value.
     override func updateValue(_ value: V) {
-        Task {
-            await store.setValue(value, for: name)
+        storedValue = value
+        updateTask?.cancel()
+        updateTask = Task {
+            try? await Task.sleep(for: .seconds(1))
+            if !Task.isCancelled {
+                await store.setValue(value, for: name)
+            }
         }
     }
 }
