@@ -33,7 +33,7 @@ public struct Keyp<V: Codable & Sendable>: DynamicProperty {
     
     /// Initializes the property wrapper with a custom accessor.
     /// - Parameters accessor: An accessor for isolated `Keypr` store access.
-    init(_ accessor: KeyprIsolatedAccessor<V>) {
+    public init(_ accessor: KeyprIsolatedAccessor<V>) {
         keypUpdater = AccessorKeypUpdater(accessor: accessor)
     }
     
@@ -42,7 +42,7 @@ public struct Keyp<V: Codable & Sendable>: DynamicProperty {
     ///   - wrappedValue: The default value.
     ///   - store: The `Keypr` store.
     ///   - name: The key name.
-    init(wrappedValue: V, _ store: Keypr, _ name: String) {
+    public init(wrappedValue: V, _ store: Keypr, _ name: String) {
         keypUpdater = NamedKeypUpdater(store: store, name: name, defaultValue: wrappedValue)
     }
 }
