@@ -251,9 +251,7 @@ extension Keypr {
     /// - Parameter path: The file URL to remove.
     /// - Throws: An error if removal fails.
     public static func removeKeypr(atPath path: URL) throws {
-        if FileManager.default.isDeletableFile(atPath: path.absoluteString) {
-            try FileManager.default.removeItem(at: path)
-        }
+        try FileManager.default.removeItem(at: path)
     }
     
     /// Creates an encoded `[String: Data]` will all values to persist to disk.
