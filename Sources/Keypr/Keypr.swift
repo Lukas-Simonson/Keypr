@@ -35,7 +35,7 @@ public actor Keypr {
     private var saveTask: Task<Void, Error>? = nil
     
     /// Creates an in-memory `Keypr` store.
-    public init() throws {
+    public init() {
         self.pathURL = nil
         self.encodedStorage = [:]
     }
