@@ -31,12 +31,13 @@ The `Keypr` actor is the base component that you will use to do pretty much ever
 > [!Important]
 > Ensure that you only have one instance of the Keypr actor per store, two or more instances could lead to file writing issues.
 
-You can create a `Keypr` instance in one of two ways, provding a URL and providing a Name. Though you can create an instance anywhere, it is recommended to either do it with a Dependency Injection framework, or by adding an extension to the `Keypr` type with a static property to store it.
+You can create a `Keypr` instance in one of three ways, provding a URL, providing a Name, or create an in-memory instance by providing nothing. Though you can create an instance anywhere, it is recommended to either do it with a Dependency Injection framework, or by adding an extension to the `Keypr` type with a static property to store it.
 
 ```swift
 extension Keypr {
     static let main = Keypr(name: "main") // Returns nil if the default location cannot be used.
     static let secondary = try? Keypr(path: URL(filePath: "/Path/To/File/Location")!)
+    static let inMemory = Keypr() // Creates an in-memory Keypr store.
 }
 ```
 

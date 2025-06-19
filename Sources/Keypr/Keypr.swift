@@ -34,6 +34,12 @@ public actor Keypr {
     /// A `Task` used to debounce save requests.
     private var saveTask: Task<Void, Error>? = nil
     
+    /// Creates an in-memory `Keypr` store.
+    public init() throws {
+        self.pathURL = nil
+        self.encodedStorage = [:]
+    }
+    
     /// Initializes a `Keypr` instance with a file  path for persistence.
     /// - Parameter path: The file URL to persist the store.
     /// - Throws: A DecodingError if the file cannot be decoded.
@@ -197,6 +203,7 @@ extension Keypr {
     
     /// Debounces any current autosave() calls and starts a new one.
     private func autosave() {
+        guard let pathURL else { return }
         saveTask?.cancel()
         saveTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(1))
