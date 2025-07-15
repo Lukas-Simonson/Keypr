@@ -120,7 +120,7 @@ extension Keypr {
     public func setValue<V: Codable & Sendable>(_ value: V, for name: String) {
         self.cache[name] = AnyKeyable(value)
         self.sequence.emit(cache)
-        self.save()
+        self.autosave()
     }
     
     /// Mutates the store using an async closure, returning a value.
@@ -203,7 +203,7 @@ extension Keypr {
     
     /// Debounces any current autosave() calls and starts a new one.
     private func autosave() {
-        guard let pathURL else { return }
+        guard pathURL != nil else { return }
         saveTask?.cancel()
         saveTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(1))
